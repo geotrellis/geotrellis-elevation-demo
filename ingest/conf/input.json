@@ -1,0 +1,11 @@
+[
+  {
+    "name": "elevation",
+    "format": "geotiff",
+    "backend": {
+      "type": "hadoop",
+      "path": "hdfs://hdfs-name/source"
+    },
+    "cache": "NONE"
+  }
+]
