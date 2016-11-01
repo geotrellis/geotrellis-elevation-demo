@@ -7,14 +7,17 @@ import geotrellis.spark.etl.config.EtlConf
 import geotrellis.spark.util.SparkUtils
 import geotrellis.vector.ProjectedExtent
 
-import org.apache.spark.{SparkContext, SparkConf}
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkContext, SparkConf}
 
 
-object Ingest {
+object Ingest extends LazyLogging {
 
-  // Number of partitions to split the source data into,
-  // if we get OutOfMemoryErrors this needs to increase.
+  /**
+    * Number of partitions to split the source data into, if we get
+    * OutOfMemoryErrors this needs to increase.
+    */
   val SPLIT_PARTITIONS = 1000
 
   /**
@@ -31,7 +34,7 @@ object Ingest {
     EtlConf(args).foreach { conf =>
       val etl = Etl(conf)
 
-      /* load source tiles using input module specified */
+      /** load source tiles using input module specified */
       val sourceTiles: RDD[(ProjectedExtent, Tile)] = etl.load[ProjectedExtent, Tile]
 
       val splitTiles: RDD[(ProjectedExtent, Tile)] =
@@ -39,10 +42,10 @@ object Ingest {
           .split(1024, 1024)
           .repartition(SPLIT_PARTITIONS)
 
-      /* perform the reprojection and mosaicing step to fit tiles to LayoutScheme specified */
+      /** perform the reprojection and mosaicing step to fit tiles to LayoutScheme specified */
       val (zoom, tiled) = etl.tile[ProjectedExtent, Tile, SpatialKey](splitTiles)
 
-      /* save and optionally pyramid the mosaiced layer */
+      /** save and optionally pyramid the mosaiced layer */
       etl.save[SpatialKey, Tile](LayerId(etl.input.name, zoom), tiled)
     }
 

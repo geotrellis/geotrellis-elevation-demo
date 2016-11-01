@@ -37,11 +37,16 @@ import spray.http._
 import spray.httpx.SprayJsonSupport._
 import spray.json._
 import spray.routing._
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConversions._
 
 
-class ElevationServiceActor(override val staticPath: String, config: Config) extends Actor with ElevationService {
+class ElevationServiceActor(override val staticPath: String, config: Config)
+    extends Actor
+    with ElevationService
+    with LazyLogging {
+
   val conf = AvroRegistrator(
     new SparkConf()
       .setAppName("Elevation")
@@ -76,9 +81,12 @@ class ElevationServiceActor(override val staticPath: String, config: Config) ext
         (layerName -> histogram.quantileBreaks(1<<8))
       })
       .toMap
+
+  logger.info("Breaks computed")
 }
 
 trait ElevationService extends HttpService {
+
   implicit val sparkContext: SparkContext
   implicit val executionContext = actorRefFactory.dispatcher
   val reader: FilteringLayerReader[LayerId]

@@ -18,6 +18,7 @@ lazy val commonSettings = Seq(
     * overwrite each other.
     */
   assemblyMergeStrategy in assembly := {
+    case "log4j.properties" => MergeStrategy.first
     case "reference.conf" => MergeStrategy.concat
     case "application.conf" => MergeStrategy.concat
     case "META-INF/MANIFEST.MF" => MergeStrategy.discard
