@@ -5,7 +5,7 @@ get-data:
 import:
 	docker-compose run hdfs-name hdfs dfs -copyFromLocal /data/source/ /source
 
-# Runs the GeoTrellis ingest into Accumulo
+# Runs the GeoTrellis ingest into HDFS
 ingest:
 	sbt "project ingest" assembly
 	docker-compose run spark-master spark-submit \
@@ -16,4 +16,6 @@ ingest:
           --output "file:///ingest/conf/output.json" \
           --backend-profiles "file:///ingest/conf/backend-profiles.json"
 
-.PHONY: get-data import ingest
+etl: get-data import ingest
+
+.PHONY: get-data import ingest etl

@@ -1,8 +1,7 @@
 {
   "backend": {
-    "type": "accumulo",
-    "path": "elevation",
-    "profile": "accumulo-local"
+    "type": "hadoop",
+    "path": "hdfs://hdfs-name/catalog/"
   },
   "reprojectMethod": "buffered",
   "tileSize": 256,
