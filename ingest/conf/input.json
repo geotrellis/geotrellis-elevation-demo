@@ -2,6 +2,7 @@
   {
     "name": "elevation",
     "format": "geotiff",
+    "maxTileSize": 1024,
     "backend": {
       "type": "hadoop",
       "path": "hdfs://hdfs-name/source"

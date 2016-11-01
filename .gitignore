@@ -42,4 +42,4 @@ nohup.out
 # Data
 data/source
 data/hdfs
-data/downloaded-data
+data/download_data

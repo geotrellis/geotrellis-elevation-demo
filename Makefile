@@ -1,5 +1,5 @@
 get-data:
-	cd data & python download-and-preprocess.py lancaster-pa-1-meter.csv --download_dir download_data -o source
+	cd data && python download-and-preprocess.py lancaster-pa-1-meter.csv --download_dir download_data -o source
 
 # Imports preprocessed elevation data GeoTiffs into HDFS
 import:
@@ -7,9 +7,9 @@ import:
 
 # Runs the GeoTrellis ingest into Accumulo
 ingest:
-	#sbt "project ingest" assembly
+	sbt "project ingest" assembly
 	docker-compose run spark-master spark-submit \
-	  --master local[6] \
+	  --master local[4] \
           --class geotrellis.elevation.Ingest --driver-memory 10G \
 	  /ingest/target/scala-2.11/ingest-assembly-0.1.0.jar \
           --input "file:///ingest/conf/input.json" \

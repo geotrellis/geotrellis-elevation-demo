@@ -9,7 +9,8 @@ services:
         ports:
           - 50070:50070
         volumes:
-          - './data/hdfs:/data/hdfs'
+          # - './data/hdfs:/data/hdfs'
+          - '/Volumes/Transcend/data/tmp/hdfs:/data/hdfs'
           - './data/source:/data/source'
     hdfs-data:
         image: quay.io/geodocker/hdfs:0.1
@@ -18,8 +19,8 @@ services:
           HADOOP_MASTER_ADDRESS: hdfs-name
         depends_on:
           - hdfs-name
-        # volumes:
-        #  - '/data/gt/hdfs:/data/hdfs'
+        volumes:
+          - '/Volumes/Transcend/data/tmp/hdfs:/data/hdfs'
     zookeeper:
         image: quay.io/geodocker/zookeeper:latest
         ports:
