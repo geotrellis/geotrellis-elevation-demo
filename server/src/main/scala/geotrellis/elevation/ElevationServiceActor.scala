@@ -30,16 +30,17 @@ import geotrellis.vector.Polygon
 import geotrellis.vector.reproject._
 
 import scala.util.Try
+import scala.collection.JavaConversions._
+
 import akka.actor._
-import com.typesafe.config.Config
-import org.apache.spark.{SparkConf, SparkContext}
 import spray.http._
 import spray.httpx.SprayJsonSupport._
 import spray.json._
 import spray.routing._
-import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.JavaConversions._
+import com.typesafe.config.Config
+import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.{SparkConf, SparkContext}
 
 
 class ElevationServiceActor(override val staticPath: String, config: Config)
@@ -104,10 +105,12 @@ trait ElevationService
   def getMetaData(id: LayerId): TileLayerMetadata[SpatialKey] =
     attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](id)
 
-  def serviceRoute = get {
+  def serviceRoute =
     pathPrefix("gt") {
-      pathPrefix("tms")(tms)
+      pathPrefix("tms")(tms) ~
+      pathPrefix("mean")(polygonalMean)
     } ~
+  get {
     pathEndOrSingleSlash {
       getFromFile(staticPath + "/index.html")
     } ~
@@ -116,26 +119,74 @@ trait ElevationService
     }
   }
 
-  def colors = complete(ColorRampMap.getJson)
-
   def breaksMap: Map[String, Array[Double]]
 
   /** http://localhost:8777/gt/tms/{z}/{x}/{y}?colorRamp=blue-to-yellow-to-red-heatmap */
   def tms = pathPrefix(IntNumber / IntNumber / IntNumber) {
     (zoom, x, y) => {
-      parameters('colorRamp ? "blue-to-red") {
-        (colorRamp) => {
-          val key = SpatialKey(x, y)
+      get {
+        parameters('colorRamp ? "blue-to-red") {
+          (colorRamp) => {
+            val key = SpatialKey(x, y)
 
-          val tile = tileReader
-            .reader[SpatialKey, Tile](LayerId("elevation", zoom))
-            .read(key)
+            val tile = tileReader
+              .reader[SpatialKey, Tile](LayerId("elevation", zoom))
+              .read(key)
 
-          val breaks = breaksMap.getOrElse("elevation", throw new Exception)
-          val ramp = ColorRampMap.getOrElse(colorRamp, ColorRamps.BlueToRed).toColorMap(breaks)
+            val breaks = breaksMap.getOrElse("elevation", throw new Exception)
+            val ramp = ColorRampMap.getOrElse(colorRamp, ColorRamps.BlueToRed).toColorMap(breaks)
 
-          respondWithMediaType(MediaTypes.`image/png`) {
-            complete(tile.renderPng(ramp).bytes)
+            respondWithMediaType(MediaTypes.`image/png`) {
+              complete(tile.renderPng(ramp).bytes)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /** http://localhost:8777/gt/mean */
+  def polygonalMean = {
+    import scala.concurrent.Future
+    import geotrellis.vector._
+    import spray.json.DefaultJsonProtocol._
+
+    cors {
+      post {
+        entity(as[String]) { json =>
+          complete {
+            Future {
+              val zoom = 18
+              val layerId = LayerId("elevation", zoom)
+
+              /** Retrieve the raw geometry that was POSTed to the endpoint */
+              val rawGeometry = try {
+                json.parseJson.convertTo[Geometry]
+              } catch {
+                case e: Exception => sys.error("THAT PROBABLY WASN'T GEOMETRY")
+              }
+
+              /** Convert the raw geometry into either a (multi|)polygon */
+              val geometry = rawGeometry match {
+                case p: Polygon => MultiPolygon(p.reproject(LatLng, WebMercator))
+                case mp: MultiPolygon => mp.reproject(LatLng, WebMercator)
+                case _ => sys.error(s"BAD GEOMETRY")
+              }
+
+              /** Compute the bounding box of the query geometry */
+              val extent = geometry.envelope
+
+              /** Fetch an RDD scoped to the bounding box of the query geometry */
+              val rdd0 = reader
+                .query[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](layerId)
+                .where(Intersects(extent))
+                .result
+
+              /** Compute the polygonal mean of the query geometry */
+              val answer = rdd0.polygonalMean(geometry)
+
+              JsObject("answer" -> JsNumber(answer))
+            }
           }
         }
       }
