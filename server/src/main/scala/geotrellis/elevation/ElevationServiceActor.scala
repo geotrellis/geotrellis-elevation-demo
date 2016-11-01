@@ -85,7 +85,9 @@ class ElevationServiceActor(override val staticPath: String, config: Config)
   logger.info("Breaks computed")
 }
 
-trait ElevationService extends HttpService {
+trait ElevationService
+    extends HttpService
+    with CORSSupport {
 
   implicit val sparkContext: SparkContext
   implicit val executionContext = actorRefFactory.dispatcher
