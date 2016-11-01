@@ -10,19 +10,19 @@ import geotrellis.vector.ProjectedExtent
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.rdd.RDD
 
+
 object Ingest {
 
   // Number of partitions to split the source data into,
   // if we get OutOfMemoryErrors this needs to increase.
   val SPLIT_PARTITIONS = 1000
 
-  /** This is a simple version of an ingest call.
-    * We could use this if it weren't for the fact
-    * that the elevation tiles are big - because
-    * we need to split them up, we need to use
-    * some finer grained components of the ETL.
-    * This should change prior to 1.0, where
-    * a splitting mechanism will be available via configuration.
+  /**
+    * This is a simple version of an ingest call.  We could use this
+    * if it weren't for the fact that the elevation tiles are big -
+    * because we need to split them up, we need to use some finer
+    * grained components of the ETL.  This should change prior to 1.0,
+    * where a splitting mechanism will be available via configuration.
     */
   def simpleIngest(args: Array[String])(implicit sc: SparkContext): Unit =
     Etl.ingest[ProjectedExtent, SpatialKey, Tile](args)
