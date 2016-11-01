@@ -16,4 +16,4 @@ ingest:
           --output "file:///ingest/conf/output.json" \
           --backend-profiles "file:///ingest/conf/backend-profiles.json"
 
-.PHONY: ingest
+.PHONY: get-data import ingest
