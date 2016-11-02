@@ -43,3 +43,6 @@ nohup.out
 data/source
 data/hdfs
 data/download_data
+
+# virtualenv
+env/
