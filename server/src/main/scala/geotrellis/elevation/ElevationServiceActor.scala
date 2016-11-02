@@ -111,12 +111,10 @@ trait ElevationService
 
   def serviceRoute =
     path("catalog") { catalogRoute }  ~
-      pathPrefix("gt") {
-        pathPrefix("tms")(tms) ~
-        pathPrefix("mean")(polygonalMean)
-      } ~
-      get {
-        pathEndOrSingleSlash {
+    pathPrefix("tiles")(tms) ~
+    pathPrefix("mean")(polygonalMean) ~
+    get {
+      pathEndOrSingleSlash {
         getFromFile(staticPath + "/index.html")
       } ~
       pathPrefix("") {
@@ -126,6 +124,7 @@ trait ElevationService
 
   def breaksMap: Map[String, Array[Double]]
 
+  /** http://localhost:8777/catalog */
   def catalogRoute = {
     import scala.concurrent.Future
     import geotrellis.vector._
@@ -178,9 +177,9 @@ trait ElevationService
     }
   }
 
-  /** http://localhost:8777/gt/tms/{z}/{x}/{y}?colorRamp=blue-to-yellow-to-red-heatmap */
-  def tms = pathPrefix(IntNumber / IntNumber / IntNumber) {
-    (zoom, x, y) => {
+  /** http://localhost:8777/tiles/elevation/{z}/{x}/{y}?colorRamp=blue-to-yellow-to-red-heatmap */
+  def tms = pathPrefix(PathElement / IntNumber / IntNumber / IntNumber) {
+    (layerName, zoom, x, y) => {
       get {
         parameters('colorRamp ? "blue-to-red") {
           (colorRamp) => {
@@ -202,7 +201,7 @@ trait ElevationService
     }
   }
 
-  /** http://localhost:8777/gt/mean */
+  /** http://localhost:8777/mean */
   def polygonalMean = {
     import scala.concurrent.Future
     import geotrellis.vector._
