@@ -35,14 +35,8 @@ var IndexComparison = React.createClass({
     error => {});
   },
   _fillBox: function(ctx, value, ndi) {
-    let color = ndi === 'ndvi' ? '#64c59d' : '#add8e6';
-    ctx.fillStyle = color;
-    ctx.fillRect(
-      (value > 0 ? 150 : 150 + (value * 150)),
-      50,
-      Math.abs(value) * 150,
-      130
-    );
+      ctx.textAlign = 'center';
+      ctx.fillText(value, 150, 30);
   },
   _renderChart: function(polyLayer, ndi, layerType) {
     let ctx = document.getElementById("canvas").getContext('2d');
@@ -57,31 +51,7 @@ var IndexComparison = React.createClass({
       this._fillBox(ctx, polyLayer.stats[ndi], ndi);
     }
     ctx.fillStyle = '#000000';
-    ctx.font = '15px Arial';
-
-    // Index bottom
-    ctx.textAlign = 'start';
-    ctx.fillText('-1', 5, 20);
-    ctx.beginPath();
-    ctx.moveTo(0, 40);
-    ctx.lineTo(0, canvas.height);
-    ctx.stroke();
-
-    // Index middle
-    ctx.textAlign = 'center';
-    ctx.fillText('0', 150, 20);
-    ctx.beginPath();
-    ctx.moveTo(150, 40);
-    ctx.lineTo(150, canvas.height);
-    ctx.stroke();
-
-    // Index top
-    ctx.textAlign = 'right';
-    ctx.fillText('1', 295, 20);
-    ctx.beginPath();
-    ctx.moveTo(300, 40);
-    ctx.lineTo(300, canvas.height);
-    ctx.stroke();
+    ctx.font = '12px Arial';
   },
   componentDidMount: function() {
     if (this.props.layerType === 'intraLayerDiff') {

@@ -96,10 +96,6 @@ var Panels = React.createClass({
       } else {
         chartPanel = (
           <Panel header="Selected Data" eventKey="3" id={3}>
-            <ButtonGroup>
-              <Button active={this.props.ndi == 'ndvi'} onClick={() => this.props.setIndexType('ndvi')}>NDVI</Button>
-              <Button active={this.props.ndi == 'ndwi'} onClick={() => this.props.setIndexType('ndwi')}>NDWI</Button>
-            </ButtonGroup>
             <IndexComparison poly={this.props.analysisLayer}
                              ndi={this.props.ndi}
                              times={this.props.times}
@@ -127,17 +123,6 @@ var Panels = React.createClass({
           />
         </Panel>
 
-        <Panel header="Change Detection" eventKey="2" id={2}>
-          <DiffLayer
-            ref="diff"
-            rootUrl={this.props.rootUrl}
-            layers={this.props.layers}
-            showLayer={this.showLayer(2)}
-            showLayerWithBreaks={this.showLayerWithBreaks(2)}
-            showExtent={this.showExtent(2)}
-            registerTime={this.props.registerTime}
-          />
-        </Panel>
       </PanelGroup>
 
       {chartPanel}

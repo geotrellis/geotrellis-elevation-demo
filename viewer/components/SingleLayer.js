@@ -119,8 +119,6 @@ var SingleLayer = React.createClass({
                disabled={!isLandsat}
                onChange={e => this.updateState("operation", e.target.value)} >
           <option value="none">View</option>
-          <option value="ndvi">NDVI</option>
-          <option value="ndwi">NDWI</option>
         </Input>
       </div>
     )
