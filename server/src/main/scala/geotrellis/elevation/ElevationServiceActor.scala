@@ -16,6 +16,7 @@
 
 package geotrellis.elevation
 
+import geotrellis.proj4.CRS
 import geotrellis.proj4.{LatLng, WebMercator}
 import geotrellis.raster._
 import geotrellis.raster.histogram._
@@ -25,9 +26,12 @@ import geotrellis.raster.render._
 import geotrellis.spark._
 import geotrellis.spark.io._
 import geotrellis.spark.io.AttributeStore.Fields
+import geotrellis.spark.tiling._
 import geotrellis.vector.io.json.Implicits._
 import geotrellis.vector.Polygon
 import geotrellis.vector.reproject._
+import java.time.format.DateTimeFormatter
+import java.time.{ZonedDateTime, ZoneOffset}
 
 import scala.util.Try
 import scala.collection.JavaConversions._
@@ -97,6 +101,7 @@ trait ElevationService
 
   val staticPath: String
   val baseZoomLevel = 9
+  val dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
 
   def layerId(layer: String): LayerId =
     LayerId(layer, baseZoomLevel)
@@ -105,24 +110,76 @@ trait ElevationService
     attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](id)
 
   def serviceRoute =
-    pathPrefix("gt") {
-      pathPrefix("tms")(tms) ~
-      pathPrefix("mean")(polygonalMean)
-    } ~
-  get {
-    pathEndOrSingleSlash {
-      getFromFile(staticPath + "/index.html")
-    } ~
-    pathPrefix("") {
-      getFromDirectory(staticPath)
+    path("catalog") { catalogRoute }  ~
+    pathPrefix("tiles")(tms) ~
+    pathPrefix("mean")(polygonalMean) ~
+    get {
+      pathEndOrSingleSlash {
+        getFromFile(staticPath + "/index.html")
+      } ~
+      pathPrefix("") {
+        getFromDirectory(staticPath)
+      }
     }
-  }
 
   def breaksMap: Map[String, Array[Double]]
 
-  /** http://localhost:8777/gt/tms/{z}/{x}/{y}?colorRamp=blue-to-yellow-to-red-heatmap */
-  def tms = pathPrefix(IntNumber / IntNumber / IntNumber) {
-    (zoom, x, y) => {
+  /** http://localhost:8777/catalog */
+  def catalogRoute = {
+    import scala.concurrent.Future
+    import geotrellis.vector._
+    import spray.json.DefaultJsonProtocol._
+
+    cors {
+      get {
+        import spray.json.DefaultJsonProtocol._
+        complete {
+          Future {
+            val metadataReader = new MetadataReader(attributeStore)
+            val layerInfo =
+              metadataReader.layerNamesToZooms //Map[String, Array[Int]]
+                .keys
+                .toList
+                .sorted
+                .map { name =>
+                // assemble catalog from metadata common to all zoom levels
+                val extent = {
+                  val (extent, crs) = Try {
+                    attributeStore.read[(Extent, CRS)](LayerId(name, 0), "extent")
+                  }.getOrElse((LatLng.worldExtent, LatLng))
+
+                  extent.reproject(crs, LatLng)
+                }
+
+                val times = Array[Long](0)
+                  .map { instant =>
+                  dateTimeFormat.format(ZonedDateTime.ofInstant(instant, ZoneOffset.ofHours(-4)))
+                }
+                (name, extent, times.sorted)
+              }
+
+
+            JsObject(
+              "layers" ->
+                layerInfo.map { li =>
+                  val (name, extent, times) = li
+                  JsObject(
+                    "name" -> JsString(name),
+                    "extent" -> JsArray(Vector(Vector(extent.xmin, extent.ymin).toJson, Vector(extent.xmax, extent.ymax).toJson)),
+                    "times" -> times.toJson,
+                    "isLandsat" -> JsBoolean(true)
+                  )
+                }.toJson
+            )
+          }
+        }
+      }
+    }
+  }
+
+  /** http://localhost:8777/tiles/elevation/{z}/{x}/{y}?colorRamp=blue-to-yellow-to-red-heatmap */
+  def tms = pathPrefix(PathElement / IntNumber / IntNumber / IntNumber) {
+    (layerName, zoom, x, y) => {
       get {
         parameters('colorRamp ? "blue-to-red") {
           (colorRamp) => {
@@ -144,7 +201,7 @@ trait ElevationService
     }
   }
 
-  /** http://localhost:8777/gt/mean */
+  /** http://localhost:8777/mean */
   def polygonalMean = {
     import scala.concurrent.Future
     import geotrellis.vector._
