@@ -64,26 +64,25 @@ class ElevationServiceActor(override val staticPath: String, config: Config)
 
   val layerNames = attributeStore.layerIds.map(_.name).distinct
 
-  val histogramZoomLevel = 8
   val breaksMap: Map[String, Array[Double]] =
     layerNames
       .map({ layerName =>
         val id = LayerId(layerName, 0)
-        val histogram =
-          Try(
-            attributeStore
-              .read[Histogram[Double]](id, "histogram").asInstanceOf[StreamingHistogram]
-          ).getOrElse(
+        val histogram = try {
+          attributeStore
+            .read[Histogram[Double]](id, "histogram").asInstanceOf[StreamingHistogram]
+        }
+        catch {
+          case e: Exception =>
+            logger.warn("Precomputed histogram not found ... computing")
             reader
-              .read[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](LayerId(layerName, histogramZoomLevel))
+              .read[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](LayerId(layerName, 9))
               .histogram
-          )
+        }
 
         (layerName -> histogram.quantileBreaks(1<<8))
       })
       .toMap
-
-  logger.info("Breaks computed")
 }
 
 trait ElevationService
