@@ -6,7 +6,7 @@
     "numPartitions": 100,
     "backend": {
       "type": "hadoop",
-      "path": "hdfs://hdfs-name/source"
+      "path": "file:///Users/rob/proj/gt/demos/elevation-demo/data/source"
     },
     "cache": "NONE"
   }

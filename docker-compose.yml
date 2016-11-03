@@ -10,8 +10,7 @@ services:
         ports:
           - 50070:50070
         volumes:
-          # - './data/hdfs:/data/hdfs'
-          # - '/Volumes/Transcend/data/tmp/hdfs:/data/hdfs'
+          - '/Volumes/Transcend/data/tmp/hdfs:/data/hdfs'
           - './data/source:/data/source'
 
     hdfs-data:
@@ -21,8 +20,8 @@ services:
           HADOOP_MASTER_ADDRESS: hdfs-name
         depends_on:
           - hdfs-name
-        # volumes:
-        #   - '/Volumes/Transcend/data/tmp/hdfs:/data/hdfs'
+        volumes:
+          - '/Volumes/Transcend/data/tmp/hdfs:/data/hdfs'
 
     spark-master:
         image: quay.io/geodocker/spark:latest

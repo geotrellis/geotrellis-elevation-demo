@@ -1,12 +1,3 @@
 {
-  "backend-profiles": [
-    {
-      "name": "accumulo-local",
-      "type": "accumulo",
-      "zookeepers": "zookeeper",
-      "instance": "accumulo",
-      "user": "root",
-      "password": "GisPwd"
-    }
-  ]
+  "backend-profiles": [ ]
 }

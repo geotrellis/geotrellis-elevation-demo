@@ -47,22 +47,15 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.{SparkConf, SparkContext}
 
 
-class ElevationServiceActor(override val staticPath: String, config: Config)
+class ElevationServiceActor(override val staticPath: String, config: Config, val sparkContext: SparkContext)
     extends Actor
     with ElevationService
     with LazyLogging {
 
-  val conf = AvroRegistrator(
-    new SparkConf()
-      .setAppName("Elevation")
-      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
-  )
-
-  implicit val sparkContext = new SparkContext(conf)
-
   override def actorRefFactory = context
   override def receive = runRoute(serviceRoute)
+
+  implicit val sc = sparkContext
 
   lazy val (reader, tileReader, attributeStore) = initBackend(config)
 
@@ -72,19 +65,11 @@ class ElevationServiceActor(override val staticPath: String, config: Config)
     layerNames
       .map({ layerName =>
         val id = LayerId(layerName, 0)
-        val histogram = try {
+        val histogram =
           attributeStore
             .read[Histogram[Double]](id, "histogram").asInstanceOf[StreamingHistogram]
-        }
-        catch {
-          case e: Exception =>
-            logger.warn("Precomputed histogram not found ... computing")
-            reader
-              .read[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](LayerId(layerName, 9))
-              .histogram
-        }
 
-        (layerName -> histogram.quantileBreaks(1<<8))
+        (layerName -> histogram.quantileBreaks(50))
       })
       .toMap
 }
@@ -183,23 +168,35 @@ trait ElevationService
       get {
         parameters('colorRamp ? "blue-to-red") {
           (colorRamp) => {
-            val key = SpatialKey(x, y)
-
-            val tile = tileReader
-              .reader[SpatialKey, Tile](LayerId("elevation", zoom))
-              .read(key)
-
-            val breaks = breaksMap.getOrElse("elevation", throw new Exception)
-            val ramp = ColorRampMap.getOrElse(colorRamp, ColorRamps.BlueToRed).toColorMap(breaks)
-
             respondWithMediaType(MediaTypes.`image/png`) {
-              complete(tile.renderPng(ramp).bytes)
+              complete {
+                val key = SpatialKey(x, y)
+
+                val tileOpt =
+                  try {
+                    Some(
+                      tileReader
+                        .reader[SpatialKey, Tile](LayerId("elevation", zoom))
+                        .read(key)
+                    )
+                  } catch {
+                    case e: TileNotFoundError => None
+                  }
+
+                tileOpt.map { tile =>
+                  val breaks = breaksMap.getOrElse("elevation", throw new Exception)
+                  val ramp = ColorRampMap.getOrElse(colorRamp, ColorRamps.BlueToRed).toColorMap(breaks)
+
+                  tile.renderPng(ramp).bytes
+                }
+              }
             }
           }
         }
       }
     }
   }
+
 
   /** http://localhost:8777/mean */
   def polygonalMean = {
@@ -233,13 +230,13 @@ trait ElevationService
               val extent = geometry.envelope
 
               /** Fetch an RDD scoped to the bounding box of the query geometry */
-              val rdd0 = reader
+              val rdd = reader
                 .query[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](layerId)
                 .where(Intersects(extent))
                 .result
 
               /** Compute the polygonal mean of the query geometry */
-              val answer = rdd0.polygonalMean(geometry)
+              val answer = rdd.polygonalMean(geometry)
 
               JsObject("answer" -> JsNumber(answer))
             }

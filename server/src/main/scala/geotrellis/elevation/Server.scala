@@ -20,8 +20,8 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.io.IO
 import com.typesafe.config.ConfigFactory
+import org.apache.spark.{SparkConf, SparkContext}
 import spray.can.Http
-
 
 object Server {
 
@@ -34,8 +34,17 @@ object Server {
 
     implicit val system = ActorSystem("elevation-service")
 
+    val conf = AvroRegistrator(
+      new SparkConf()
+        .setAppName("Elevation")
+        .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+        .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
+    )
+
+    val sparkContext = new SparkContext(conf)
+
     // create and start our service actor
-    val service = system.actorOf(Props(classOf[ElevationServiceActor], staticPath, config), "elevation-service")
+    val service = system.actorOf(Props(classOf[ElevationServiceActor], staticPath, config, sparkContext), "elevation-service")
 
     // start a new HTTP server on port 8080 with our service actor as the handler
     IO(Http) ! Http.Bind(service, host, port)

@@ -1,7 +1,7 @@
 {
   "backend": {
-    "type": "hadoop",
-    "path": "hdfs://hdfs-name/catalog/"
+    "type": "file",
+    "path": "/Volumes/Transcend/data/elevation-catalog"
   },
   "reprojectMethod": "per-tile",
   "tileSize": 256,

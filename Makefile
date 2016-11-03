@@ -9,12 +9,32 @@ import:
 ingest:
 	sbt "project ingest" assembly
 	docker-compose run spark-master spark-submit \
-	  --master local[4] \
+	  --master local[*] \
           --class geotrellis.elevation.Ingest --driver-memory 10G \
 	  /ingest/target/scala-2.11/ingest-assembly-0.1.0.jar \
           --input "file:///ingest/conf/input.json" \
           --output "file:///ingest/conf/output.json" \
           --backend-profiles "file:///ingest/conf/backend-profiles.json"
+
+ingest-local:
+	sbt "project ingest" assembly
+	spark-submit \
+	  --master local[*] \
+          --class geotrellis.elevation.Ingest --driver-memory 10G \
+	  ${PWD}/ingest/target/scala-2.11/ingest-assembly-0.1.0.jar \
+          --input "file://${PWD}/ingest/conf/input-file.json" \
+          --output "file://${PWD}/ingest/conf/output-file.json" \
+          --backend-profiles "file://${PWD}/ingest/conf/backend-profiles.json"
+
+server-local:
+	sbt "project server" assembly
+	spark-submit \
+	  --master local[*] \
+          --class geotrellis.elevation.Server --driver-memory 10G \
+	  ${PWD}/server/target/scala-2.11/server-assembly-0.1.0.jar \
+          --input "file://${PWD}/ingest/conf/input-file.json" \
+          --output "file://${PWD}/ingest/conf/output-file.json" \
+          --backend-profiles "file://${PWD}/ingest/conf/backend-profiles.json"
 
 etl: get-data import ingest
 
