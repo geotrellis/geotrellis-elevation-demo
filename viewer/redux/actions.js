@@ -16,6 +16,12 @@ var actions = {
       index: index
     };
   },
+  setReaderType: function(readerType) {
+    return {
+      type: 'SET_READER_TYPE',
+      readerType: readerType
+    };
+  },
   setIndexType: function(ndi) {
     return {
       type: 'SET_NDI',

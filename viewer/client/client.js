@@ -5,12 +5,12 @@ import App from '../containers/App';
 import configureStore from '../redux/store.js'
 
 var initialState = {
-  rootUrl: "http://" + window.location.hostname + ":8899",
+  rootUrl: "http://" + window.location.hostname + ":8777",
   layerName: undefined,
   analysisLayer: undefined,
   layerType: 'singleLayer',
   times: {}, // A map from layer to times selected for that layer
-  ndi: 'ndvi',
+  readerType: "rdd",
   map: {
     url: [],
     bounds: undefined

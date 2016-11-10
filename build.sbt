@@ -37,8 +37,9 @@ lazy val commonSettings = Seq(
   * commands in this project, it will run them for each of the
   * subprojects.
   */
-lazy val root = Project("root", file("."))
-  .aggregate(ingest, server)
+lazy val root =
+  Project("root", file("."))
+    .aggregate(ingest, server)
 
 /**
   * This is the ingest subproject.  See the "ingest/build.sbt" for

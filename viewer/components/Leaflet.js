@@ -167,7 +167,7 @@ var Leaflet = React.createClass({
               circle: false,
               rectangle: false,
               polygon: { shapeOptions: polyOptions },
-              marker: { icon: L.divIcon({className: 'unselected-marker'}) }
+              marker: false
             }}
           />
         </FeatureGroup>

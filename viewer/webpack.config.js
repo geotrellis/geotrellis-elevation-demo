@@ -17,7 +17,7 @@ module.exports = {
     new webpack.HotModuleReplacementPlugin(),
     new webpack.NoErrorsPlugin(),
       new HtmlWebpackPlugin({
-          title: 'GeoTrellis Landsat Demo',
+          title: 'GeoTrellis Elevation Demo',
           favicon: './client/favicon.ico'
       })
   ],

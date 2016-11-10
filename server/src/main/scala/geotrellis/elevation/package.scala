@@ -29,15 +29,15 @@ import scala.collection.JavaConversions._
 
 package object elevation {
 
-  def initBackend(config: Config)(implicit cs: SparkContext): (FilteringLayerReader[LayerId], ValueReader[LayerId], AttributeStore)  = {
+  def initBackend(config: Config)(implicit cs: SparkContext): (FilteringLayerReader[LayerId], CollectionLayerReader[LayerId], ValueReader[LayerId], AttributeStore)  = {
     config.getString("geotrellis.backend") match {
       case "hadoop" => {
         val path = config.getString("hadoop.path")
-        (HadoopLayerReader(path), HadoopValueReader(path), HadoopAttributeStore(path))
+        (HadoopLayerReader(path), HadoopCollectionLayerReader(path), HadoopValueReader(path), HadoopAttributeStore(path))
       }
       case "file" => {
         val path = config.getString("file.path")
-        (FileLayerReader(path), FileValueReader(path), FileAttributeStore(path))
+        (FileLayerReader(path), FileCollectionLayerReader(path), FileValueReader(path), FileAttributeStore(path))
       }
       case s => throw new Exception(s"not supported backend: $s")
     }

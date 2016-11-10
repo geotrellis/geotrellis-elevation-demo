@@ -2,6 +2,8 @@ var reducer = function (state, action) {
   switch (action.type) {
     case 'SET_ANALYSIS_LAYER':
       return Object.assign({}, state, { analysisLayer: action.layer });
+    case 'SET_READER_TYPE':
+      return Object.assign({}, state, { readerType: action.readerType });
     case 'SET_NDI':
       return Object.assign({}, state, { ndi: action.ndi });
     case 'SET_LAYER_TYPE':
@@ -31,13 +33,10 @@ var reducer = function (state, action) {
     case 'LOAD_CATALOG_SUCCESS': {
       // On new catalog, set layer to first in list; times to the corresponding times
       var layer = action.catalog.layers[0];
-      var times = {};
-      times[layer.name] = layer.times;
       return Object.assign({}, state, {
         rootUrl: action.url,
         catalog: action.catalog,
-        layerName: layer.name,
-        times: times // set this to be equal to times - values are updated later
+        layerName: layer.name
       });
     }
     case 'SHOW_BOUNDS': {

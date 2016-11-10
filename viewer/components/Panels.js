@@ -14,9 +14,6 @@ var Panels = React.createClass({
       autoZoom: true
     };
   },
-  handleNDI: function(ndi) {
-    this.props.setIndexType(ndi);
-  },
   handleAutoZoom: function(e) {
     let v = e.target.checked || false;
     this.setState(_.merge({}, this.state, {autoZoom: v}));
@@ -95,9 +92,9 @@ var Panels = React.createClass({
           </Panel>)
       } else {
         chartPanel = (
-          <Panel header="Selected Data" eventKey="3" id={3}>
+          <Panel header="Mean of Area covered by Polygon" eventKey="3" id={3}>
             <IndexComparison poly={this.props.analysisLayer}
-                             ndi={this.props.ndi}
+                             readerType={this.props.readerType}
                              times={this.props.times}
                              layerType={this.props.layerType} />
           </Panel>
@@ -110,6 +107,10 @@ var Panels = React.createClass({
       <Input type="checkbox" label="Snap to layer extent" checked={this.state.autoZoom} onChange={this.handleAutoZoom} />
       <PanelGroup defaultActiveKey="1" accordion={true} onSelect={this.handlePaneSelect}>
         <Panel header="Single Layer" eventKey="1" id={1}>
+            <ButtonGroup>
+              <Button active={this.props.readerType == 'rdd'} onClick={() => this.props.setReaderType('rdd')}>RDD</Button>
+              <Button active={this.props.readerType == 'collection'} onClick={() => this.props.setReaderType('collection')}>Collection</Button>
+            </ButtonGroup>
           <SingleLayer
             ref="single"
             rootUrl={this.props.rootUrl}

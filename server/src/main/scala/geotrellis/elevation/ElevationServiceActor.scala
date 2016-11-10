@@ -57,7 +57,7 @@ class ElevationServiceActor(override val staticPath: String, config: Config, val
 
   implicit val sc = sparkContext
 
-  lazy val (reader, tileReader, attributeStore) = initBackend(config)
+  lazy val (reader, collectionReader, tileReader, attributeStore) = initBackend(config)
 
   val layerNames = attributeStore.layerIds.map(_.name).distinct
 
@@ -81,12 +81,12 @@ trait ElevationService
   implicit val sparkContext: SparkContext
   implicit val executionContext = actorRefFactory.dispatcher
   val reader: FilteringLayerReader[LayerId]
+  val collectionReader: CollectionLayerReader[LayerId]
   val tileReader: ValueReader[LayerId]
   val attributeStore: AttributeStore
 
   val staticPath: String
   val baseZoomLevel = 9
-  val dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
 
   def layerId(layer: String): LayerId =
     LayerId(layer, baseZoomLevel)
@@ -130,29 +130,25 @@ trait ElevationService
                 // assemble catalog from metadata common to all zoom levels
                 val extent = {
                   val (extent, crs) = Try {
-                    attributeStore.read[(Extent, CRS)](LayerId(name, 0), "extent")
+                    val md =
+                      attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](LayerId(name, 0))
+                    (md.extent, md.crs)
                   }.getOrElse((LatLng.worldExtent, LatLng))
 
                   extent.reproject(crs, LatLng)
                 }
 
-                val times = Array[Long](0)
-                  .map { instant =>
-                  dateTimeFormat.format(ZonedDateTime.ofInstant(instant, ZoneOffset.ofHours(-4)))
-                }
-                (name, extent, times.sorted)
+                (name, extent)
               }
 
 
             JsObject(
               "layers" ->
                 layerInfo.map { li =>
-                  val (name, extent, times) = li
+                  val (name, extent) = li
                   JsObject(
                     "name" -> JsString(name),
-                    "extent" -> JsArray(Vector(Vector(extent.xmin, extent.ymin).toJson, Vector(extent.xmax, extent.ymax).toJson)),
-                    "times" -> times.toJson,
-                    "isLandsat" -> JsBoolean(true)
+                    "extent" -> JsArray(Vector(Vector(extent.xmin, extent.ymin).toJson, Vector(extent.xmax, extent.ymax).toJson))
                   )
                 }.toJson
             )
@@ -185,9 +181,11 @@ trait ElevationService
 
                 tileOpt.map { tile =>
                   val breaks = breaksMap.getOrElse("elevation", throw new Exception)
-                  val ramp = ColorRampMap.getOrElse(colorRamp, ColorRamps.BlueToRed).toColorMap(breaks)
+                  val colorMap =
+                    ColorRampMap.getOrElse(colorRamp, ColorRamps.BlueToRed)
+                      .toColorMap(breaks)
 
-                  tile.renderPng(ramp).bytes
+                  tile.renderPng(colorMap).bytes
                 }
               }
             }
@@ -207,43 +205,53 @@ trait ElevationService
     cors {
       post {
         entity(as[String]) { json =>
-          complete {
-            Future {
-              val zoom = 18
-              val layerId = LayerId("elevation", zoom)
+          parameters('readerType ? "rdd") { readerType =>
+            complete {
+              Future {
+                val zoom = 18
+                val layerId = LayerId("elevation", zoom)
 
-              /** Retrieve the raw geometry that was POSTed to the endpoint */
-              val rawGeometry = try {
-                json.parseJson.convertTo[Geometry]
-              } catch {
-                case e: Exception => sys.error("THAT PROBABLY WASN'T GEOMETRY")
+                /** Retrieve the raw geometry that was POSTed to the endpoint */
+                val rawGeometry = try {
+                  json.parseJson.convertTo[Geometry]
+                } catch {
+                  case e: Exception => sys.error("THAT PROBABLY WASN'T GEOMETRY")
+                }
+
+                /** Convert the raw geometry into either a (multi|)polygon */
+                val geometry = rawGeometry match {
+                  case p: Polygon => MultiPolygon(p.reproject(LatLng, WebMercator))
+                  case mp: MultiPolygon => mp.reproject(LatLng, WebMercator)
+                  case _ => sys.error(s"BAD GEOMETRY")
+                }
+
+                val answer =
+                  if(readerType == "collection") {
+                    /** Fetch an RDD scoped to the bounding box of the query geometry */
+                    val collection = collectionReader
+                      .query[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](layerId)
+                      .where(Intersects(geometry))
+                      .result
+
+                    /** Compute the polygonal mean of the query geometry */
+                    collection.polygonalMean(geometry)
+                  } else {
+                    /** Fetch an RDD scoped to the bounding box of the query geometry */
+                    val rdd = reader
+                      .query[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](layerId)
+                      .where(Intersects(geometry))
+                      .result
+
+                    /** Compute the polygonal mean of the query geometry */
+                    rdd.polygonalMean(geometry)
+                  }
+
+                JsObject("answer" -> JsNumber(answer))
               }
-
-              /** Convert the raw geometry into either a (multi|)polygon */
-              val geometry = rawGeometry match {
-                case p: Polygon => MultiPolygon(p.reproject(LatLng, WebMercator))
-                case mp: MultiPolygon => mp.reproject(LatLng, WebMercator)
-                case _ => sys.error(s"BAD GEOMETRY")
-              }
-
-              /** Compute the bounding box of the query geometry */
-              val extent = geometry.envelope
-
-              /** Fetch an RDD scoped to the bounding box of the query geometry */
-              val rdd = reader
-                .query[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](layerId)
-                .where(Intersects(extent))
-                .result
-
-              /** Compute the polygonal mean of the query geometry */
-              val answer = rdd.polygonalMean(geometry)
-
-              JsObject("answer" -> JsNumber(answer))
             }
           }
         }
       }
     }
   }
-
 }

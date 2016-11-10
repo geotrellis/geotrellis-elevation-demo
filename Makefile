@@ -29,12 +29,9 @@ ingest-local:
 server-local:
 	sbt "project server" assembly
 	spark-submit \
-	  --master local[*] \
-          --class geotrellis.elevation.Server --driver-memory 10G \
-	  ${PWD}/server/target/scala-2.11/server-assembly-0.1.0.jar \
-          --input "file://${PWD}/ingest/conf/input-file.json" \
-          --output "file://${PWD}/ingest/conf/output-file.json" \
-          --backend-profiles "file://${PWD}/ingest/conf/backend-profiles.json"
+	  --master local[*] --driver-memory 10G \
+          --class geotrellis.elevation.Server \
+	  ${PWD}/server/target/scala-2.11/server-assembly-0.1.0.jar
 
 etl: get-data import ingest
 

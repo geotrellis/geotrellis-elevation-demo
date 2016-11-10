@@ -18,19 +18,14 @@ var App = React.createClass({
           <Leaflet
             layerType={this.props.layerType}
             ndi={this.props.ndi}
-            times={this.props.times[this.props.layerName]}
+            readerType={this.props.readerType}
             layerName={this.props.layerName}
             rootUrl={this.props.rootUrl}
             layers={this.props.catalog.layers}
             activeLayerId={this.props.map.activeLayerId}
             url={this.props.map.url}
             bounds={this.props.map.bounds}
-            maxState={this.props.map.maxState}
-            maxAverageState={this.props.map.maxAverageState}
-            stateAverage={this.props.map.stateAverage}
-            stateDiffAverage={this.props.map.stateDiffAverage}
             fetchPolygonalSummary={this.props.actions.fetchPolygonalSummary}
-            fetchTimeSeries={this.props.actions.fetchTimeSeries}
             setAnalysisLayer={this.props.actions.setAnalysisLayer}
             analysisLayer={this.props.analysisLayer}
           />
@@ -44,7 +39,7 @@ var App = React.createClass({
               onSubmit={url => this.props.actions.fetchCatalog(url)} />
             <Panels
               analysisLayer={this.props.analysisLayer}
-              ndi={this.props.ndi}
+              readerType={this.props.readerType}
               rootUrl={this.props.rootUrl}
               layers={this.props.catalog.layers}
               activeLayerId={this.props.map.activeLayerId}
@@ -59,6 +54,7 @@ var App = React.createClass({
               showStateDiffAverage={this.props.actions.showStateDiffAverage}
               setLayerName={this.props.actions.setLayerName}
               registerTime={this.props.actions.registerTime}
+              setReaderType={this.props.actions.setReaderType}
               setIndexType={this.props.actions.setIndexType}
               setLayerType={this.props.actions.setLayerType}
               layerType={this.props.layerType}

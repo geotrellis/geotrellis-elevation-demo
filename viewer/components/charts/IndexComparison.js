@@ -8,13 +8,11 @@ var IndexComparison = React.createClass({
   getInitialState: function () {
     return { loaded: false };
   },
-  _fetchPolygonalSummary: function(polyLayer, ndi, times, layerType) {
+  _fetchPolygonalSummary: function(polyLayer, readerType, layerType) {
     let root = polyLayer.chartProps.rootURL;
     let layerName = polyLayer.chartProps.layerName;
     let latlng = polyLayer._latlng;
-    let timeQString = `?time=${this.props.times[0]}`;
-    let otherTimeQString = (layerType == 'intraLayerDiff' ? `&otherTime=${this.props.times[1]}` : '');
-    let url = `${root}/mean/${layerName}/${ndi}` + timeQString + otherTimeQString;
+    let url = `${root}/mean/${layerName}/${readerType}`;
 
     return fetch(url, {
       method: 'POST',
@@ -24,12 +22,12 @@ var IndexComparison = React.createClass({
         var data = summary.answer;
 
         if (layerType == 'intraLayerDiff') {
-          polyLayer.comparisonStats[ndi] = data;
+          polyLayer.comparisonStats[readerType] = data;
         } else {
-          polyLayer.stats[ndi] = data;
+          polyLayer.stats[readerType] = data;
         }
         this.setState({ loaded: true });
-        this._renderChart(polyLayer, ndi, layerType);
+        this._renderChart(polyLayer, readerType, layerType);
       });
     },
     error => {});
@@ -51,46 +49,46 @@ var IndexComparison = React.createClass({
       this._fillBox(ctx, polyLayer.stats[ndi], ndi);
     }
     ctx.fillStyle = '#000000';
-    ctx.font = '12px Arial';
+    ctx.font = '18px Arial';
   },
   componentDidMount: function() {
     if (this.props.layerType === 'intraLayerDiff') {
       if (! this.props.poly.comparisonStats[this.props.ndi]) {
         this.setState({ loaded: false });
-        this._fetchPolygonalSummary(this.props.poly, this.props.ndi, this.props.times, this.props.layerType);
+        this._fetchPolygonalSummary(this.props.poly, this.props.readerType, this.props.layerType);
       } else {
         this.setState({ loaded: true });
-        this._renderChart(this.props.poly, this.props.ndi, this.props.layerType);
+        this._renderChart(this.props.poly, this.props.readerType, this.props.layerType);
       }
     } else {
-      if (! this.props.poly.stats[this.props.ndi]) {
+      if (! this.props.poly.stats[this.props.readerType]) {
         this.setState({ loaded: false });
-        this._fetchPolygonalSummary(this.props.poly, this.props.ndi, this.props.times, this.props.layerType);
+        this._fetchPolygonalSummary(this.props.poly, this.props.readerType, this.props.layerType);
       } else {
         this.setState({ loaded: true });
-        this._renderChart(this.props.poly, this.props.ndi, this.props.layerType);
+        this._renderChart(this.props.poly, this.props.readerType, this.props.layerType);
       }
     }
   },
   componentWillReceiveProps: function(nextProps) {
     if (nextProps.layerType === 'intraLayerDiff') {
-      if (! nextProps.poly.comparisonStats[nextProps.ndi]) {
+      if (! nextProps.poly.comparisonStats[nextProps.readerType]) {
         this.setState({ loaded: false });
-        this._fetchPolygonalSummary(nextProps.poly, nextProps.ndi, nextProps.times, nextProps.layerType);
+        this._fetchPolygonalSummary(nextProps.poly, nextProps.readerType, nextProps.layerType);
       } else if (this.state.loaded) {
-        this._renderChart(nextProps.poly, nextProps.ndi, nextProps.layerType);
+        this._renderChart(nextProps.poly, nextProps.readerType, nextProps.layerType);
       }
     } else {
-      if (! nextProps.poly.stats[nextProps.ndi]) {
+      if (! nextProps.poly.stats[nextProps.readerType]) {
         this.setState({ loaded: false });
-        this._fetchPolygonalSummary(nextProps.poly, nextProps.ndi, nextProps.times, nextProps.layerType);
+        this._fetchPolygonalSummary(nextProps.poly, nextProps.readerType, nextProps.layerType);
       } else if (this.state.loaded) {
-        this._renderChart(nextProps.poly, nextProps.ndi, nextProps.layerType);
+        this._renderChart(nextProps.poly, nextProps.readerType, nextProps.layerType);
       }
     }
   },
   render: function() {
-    let loading = this.state.loaded ? null : (<p>Loading data...</p>)
+    let loading = this.state.loaded ? null : (<p>Loading data...</p>);
     return (
       <div>
         {loading}
